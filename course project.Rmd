@@ -1,0 +1,105 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+  md_document:
+    variant: markdown_github
+---
+# Regression Models Course Project
+
+## Executive Summary
+
+Looking at a data set `mtcars`, this project explored the relationship between transmission type and miles per gallon (MPG) (outcome) using linear models. It was found that manual transmissions have, on average, **2.94** miles per gallon **increase** over automatic transmissions.
+
+## Exploratory Analysis
+
+```{r, echo = F, message = F}
+library(ggplot2); library(dplyr)
+data(mtcars)
+```
+`mtcars` has 32 observations of 11 numeric variables. From the documentation, the `am` variable represents the transmission type, where 0 and 1 correspond to automatic and manual transmission respectively. The variables `vs`, `am`, and `gear` are considered as factors. See appendix for the structure of `mtcars`.
+```{r, echo = F}
+mtcarsfactored <- mutate(mtcars, vs = factor(vs), am = factor(am),
+                 gear = factor(gear))
+```
+
+Also in the appendix, an initial boxplot of mpg by transmission type shows that manual cars appear to have higher mpg on average compared to automatics. However, there are other variables to consider that would affect mpg. As an example, the appendix has scatterplot of mpg vs transmission, but the points are coloured by the weight of the car. 
+
+## Regression and Statistical Inferences
+
+### Simple Linear Model
+
+First, use a simple linear regression model with `am` as a regressor.
+```{r}
+fit1 <- lm(mpg ~ am, mtcarsfactored)
+round(summary(fit1)$coef,2)
+round(summary(fit1)$r.squared,2)
+```
+
+The `Intercept`, 17.15, is interpreted as the mean `mpg` for automatic cars, and the coefficient for `am1`, 7.25, represents the change in mean `mpg` for manual cars from the `Intercept`. The p-values for both are below an alpha level of 5%, thus are considered statistically significant. However, the R-squared value is around 0.36, thus the model only explains about 36% of the total variability.
+
+### Multivariable Linear Models and Selection
+
+The `step()` function returns a model with the most statistically relevant regressors, while balancing over and under-fitting the data.
+
+```{r}
+stepfit <- step(lm(mpg~.,mtcarsfactored), trace = 0)
+coef(stepfit)
+```
+
+According to the `step()` function, the variables with the highest statistical significance to `mpg` are `am`, `wt`, and `qsec`. 
+
+### Statistical Inferences and Analysis of `stepfit` model
+
+The residuals vs fitted values plot of `stepfit` shows no correlation, and the Normal Q-Q plot indicates the distribution of residuals is approximately normal. Both plots are in the appendix.
+
+Looking at the summary of `stepfit`:
+```{r}
+summary(stepfit)
+```
+
+The multiple R-squared value indicates that this model accounts for about 85% of the total variation. The coefficient for `am1` shows an increase of 2.94 in mean `mpg` for a manual transmission compared to an automatic, holding the other regressors fixed. The p-value of `am1` is less than an alpha level of 5%, thus it can be said that the difference in mean `mpg` between automatic and manual cars is statistically significant.
+
+The 95% confidence interval for the `am1` coefficient is:
+```{r}
+confint(stepfit)['am1',]
+```
+With 95% confidence, a manual transmission will see an increase of 0.05 to 5.83 miles per gallon over an automatic transmission, while holding other regressors fixed.
+
+\newpage
+## Appendix
+### Libraries
+```{r, eval = F}
+library(ggplot2); library(dplyr)
+```
+
+### Structure of mtcars
+``` {r, echo = F}
+str(mtcars)
+```
+
+### Initial boxplot of mpg vs transmission
+```{r, echo = F, fig.width = 4, fig.height = 2, fig.align = 'center'}
+g <- ggplot(mtcarsfactored, aes(x = am, y = mpg, fill = am))
+g + geom_boxplot()
+```
+
+### mpg vs transmission and cylinders
+```{r, echo = F, fig.width = 4, fig.height = 2, fig.align = 'center'}
+h <- ggplot(mtcarsfactored, aes(x = am, y = mpg, color = wt))
+h + geom_point(size = 4, alpha = 0.5) +
+        scale_colour_gradient(low = "white",high = "blue4")
+```
+
+The scatterplot shows a negative correlation between mpg and weight; naturally, heavier cars have worse mpg regardless of transmission.
+
+### Correlation Calculation
+```{r}
+round(cor(mtcars),3)[1,]
+```
+### Residual Plots
+
+```{r}
+par(mfrow = c(2, 2))
+plot(stepfit)
+```
